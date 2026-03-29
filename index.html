@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบบันทึกกาฟรส่งบิล</title>
+    <!-- โหลด Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- โหลด React และ ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- โหลด Babel สำหรับแปลง JSX ให้ทำงานบน Browser ได้ -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body class="bg-gray-50">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // --- ไอคอนแบบ SVG ---
+        const Icon = ({ name, size = 24, className = "" }) => {
+            const icons = {
+                Save: <><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></>,
+                Trash2: <><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></>,
+                Edit: <><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></>,
+                Search: <><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></>,
+                Settings: <><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></>,
+                Lock: <><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></>,
+                Unlock: <><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></>,
+                Download: <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></>,
+                Plus: <><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></>,
+                X: <><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></>,
+                FileText: <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></>,
+                CheckCircle2: <><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></>,
+                AlertCircle: <><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></>,
+                Clock: <><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></>,
+                Inbox: <><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"></polyline><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path></>,
+                CheckSquare: <><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></>
+            };
+            return (
+                <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                    {icons[name]}
+                </svg>
+            );
+        };
+
+        const ADMIN_PASSWORD = 'admin';
+        
+        // --- ⚠️ สำคัญ: ใส่ URL ใหม่ที่ได้จากการ Deploy ล่าสุดลงในช่องนี้ ---
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwdidFPwf80IJnMyFMaDmWnJvNch1sbqZ1FhsgXIbfaI9Q1v7OUMkj72jdI9BUc6_d3_Q/exec';
+
+        const App = () => {
+            const [senders, setSenders] = useState(() => {
+                const savedSenders = localStorage.getItem('billTracker_senders');
+                return savedSenders ? JSON.parse(savedSenders) : ['สมชาย ใจดี', 'สมศรี รักงาน', 'ฝ่ายจัดซื้อ'];
+            });
+            const [receivers, setReceivers] = useState(() => {
+                const savedReceivers = localStorage.getItem('billTracker_receivers');
+                return savedReceivers ? JSON.parse(savedReceivers) : ['การเงิน 1', 'การเงิน 2', 'งานพัสดุกลาง'];
+            });
+            
+            useEffect(() => { localStorage.setItem('billTracker_senders', JSON.stringify(senders)); }, [senders]);
+            useEffect(() => { localStorage.setItem('billTracker_receivers', JSON.stringify(receivers)); }, [receivers]);
+
+            const [records, setRecords] = useState([]);
+            const [isLoading, setIsLoading] = useState(true);
+            
+            // สถานะของหน้าเว็บ (แยก 3 แท็บ)
+            const [activeTab, setActiveTab] = useState('lab'); // 'lab', 'pending', 'history'
+
+            // ข้อมูลสำหรับห้องแล็บ (ฝั่งผู้ส่ง)
+            const initialFormState = { id: null, companyName: '', docNumber: '', docDate: '', amount: '', senderName: '' };
+            const [formData, setFormData] = useState(initialFormState);
+            
+            // ข้อมูลสำหรับการเงิน/พัสดุ (ฝั่งรับมอบ)
+            const [receiveModal, setReceiveModal] = useState({ show: false, recordId: null });
+            const [receiveData, setReceiveData] = useState({ receiverName: '', receiptDateTime: '' });
+            
+            const [searchTerm, setSearchTerm] = useState('');
+            const [isAdmin, setIsAdmin] = useState(false);
+            const [showAuthModal, setShowAuthModal] = useState(false);
+            const [passwordInput, setPasswordInput] = useState('');
+            const [authError, setAuthError] = useState('');
+            const [showSettingsModal, setShowSettingsModal] = useState(false);
+            const [newListItem, setNewListItem] = useState('');
+            const [listManageType, setListManageType] = useState('senders');
+            const [notification, setNotification] = useState(null);
+            const [isSubmitting, setIsSubmitting] = useState(false);
+            const [pendingAction, setPendingAction] = useState(null);
+
+            const showNotification = (message, type = 'success') => {
+                setNotification({ message, type });
+                setTimeout(() => setNotification(null), 5000);
+            };
+
+            // โหลดข้อมูลเริ่มต้น
+            useEffect(() => {
+                const fetchRecords = async () => {
+                    if (GOOGLE_SCRIPT_URL && GOOGLE_SCRIPT_URL !== 'ใส่_URL_ที่ก๊อปปี้มา_ตรงนี้') {
+                        try {
+                            const response = await fetch(GOOGLE_SCRIPT_URL);
+                            const text = await response.text();
+                            try {
+                                const data = JSON.parse(text);
+                                if (Array.isArray(data)) setRecords(data);
+                            } catch (parseError) {
+                                console.error('ข้อมูลที่ได้รับไม่ใช่ JSON:', text);
+                            }
+                        } catch (error) {
+                            console.error('Error fetching data:', error);
+                            showNotification('⚠️ เกิดข้อผิดพลาดในการเชื่อมต่อ', 'error');
+                        } finally {
+                            setIsLoading(false);
+                        }
+                    } else {
+                        setIsLoading(false);
+                    }
+                };
+                fetchRecords();
+            }, []);
+
+            // === ฝั่งห้องแล็บ: บันทึกข้อมูลบิล ===
+            const handleLabInputChange = (e) => {
+                const { name, value } = e.target;
+                setFormData({ ...formData, [name]: value });
+            };
+
+            const handleLabSubmit = async (e) => {
+                e.preventDefault();
+                if (!formData.companyName || !formData.docNumber || !formData.amount || !formData.senderName) {
+                    showNotification('กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน', 'error');
+                    return;
+                }
+                setIsSubmitting(true);
+
+                const newRecord = { ...formData, id: Date.now(), timestamp: new Date().toISOString() };
+                
+                try {
+                    if (GOOGLE_SCRIPT_URL && GOOGLE_SCRIPT_URL !== 'ใส่_URL_ที่ก๊อปปี้มา_ตรงนี้') {
+                        await fetch(GOOGLE_SCRIPT_URL, {
+                            method: 'POST',
+                            mode: 'no-cors',
+                            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                            body: JSON.stringify({ action: 'appendRow', data: newRecord })
+                        });
+                    }
+                    setRecords([newRecord, ...records]);
+                    showNotification('ห้องแล็บ: ส่งข้อมูลบิลเรียบร้อยแล้ว รอการรับมอบ');
+                    setFormData(initialFormState);
+                } catch (error) {
+                    console.error('Error saving:', error);
+                    showNotification('เกิดปัญหาในการเชื่อมต่อ', 'error');
+                } finally {
+                    setIsSubmitting(false);
+                }
+            };
+
+            // === ฝั่งการเงิน/พัสดุ: รับมอบบิล ===
+            const openReceiveModal = (id) => {
+                // ตั้งค่าเวลาเริ่มต้นเป็นเวลาปัจจุบัน
+                const now = new Date();
+                const formattedNow = now.toISOString().slice(0, 16); // format: YYYY-MM-DDTHH:mm
+                setReceiveData({ receiverName: '', receiptDateTime: formattedNow });
+                setReceiveModal({ show: true, recordId: id });
+            };
+
+            const handleReceiveSubmit = async (e) => {
+                e.preventDefault();
+                if (!receiveData.receiverName || !receiveData.receiptDateTime) {
+                    showNotification('กรุณากรอกชื่อผู้รับและเวลาที่รับมอบ', 'error');
+                    return;
+                }
+                setIsSubmitting(true);
+
+                try {
+                    if (GOOGLE_SCRIPT_URL && GOOGLE_SCRIPT_URL !== 'ใส่_URL_ที่ก๊อปปี้มา_ตรงนี้') {
+                        await fetch(GOOGLE_SCRIPT_URL, {
+                            method: 'POST',
+                            mode: 'no-cors',
+                            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                            body: JSON.stringify({ 
+                                action: 'receiveBill', 
+                                data: { id: receiveModal.recordId, receiverName: receiveData.receiverName, receiptDateTime: receiveData.receiptDateTime } 
+                            })
+                        });
+                    }
+                    
+                    // อัปเดตข้อมูลบนหน้าจอ
+                    setRecords(records.map(rec => 
+                        rec.id === receiveModal.recordId 
+                        ? { ...rec, receiverName: receiveData.receiverName, receiptDateTime: receiveData.receiptDateTime } 
+                        : rec
+                    ));
+                    
+                    showNotification('บันทึกการรับมอบสำเร็จ!');
+                    setReceiveModal({ show: false, recordId: null });
+                } catch (error) {
+                    console.error('Error receiving:', error);
+                    showNotification('เกิดปัญหาในการอัปเดตข้อมูล', 'error');
+                } finally {
+                    setIsSubmitting(false);
+                }
+            };
+
+            // === การจัดการอื่นๆ ===
+            const handleDelete = async (id) => {
+                if (window.confirm('คุณต้องการลบข้อมูลนี้ทิ้งใช่หรือไม่?')) {
+                    setRecords(records.filter(rec => rec.id !== id));
+                    showNotification('ลบข้อมูลเรียบร้อย');
+                    try {
+                        if (GOOGLE_SCRIPT_URL && GOOGLE_SCRIPT_URL !== 'ใส่_URL_ที่ก๊อปปี้มา_ตรงนี้') {
+                            await fetch(GOOGLE_SCRIPT_URL, {
+                                method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                                body: JSON.stringify({ action: 'deleteRow', data: { id: id } })
+                            });
+                        }
+                    } catch (error) { console.error('Error deleting:', error); }
+                }
+            };
+
+            const handleSettingsClick = () => {
+                if (isAdmin) { setShowSettingsModal(true); } else { setPendingAction('settings'); setShowAuthModal(true); }
+            };
+
+            const loginAdmin = (e) => {
+                e.preventDefault();
+                if (passwordInput === ADMIN_PASSWORD) {
+                    setIsAdmin(true);
+                    setShowAuthModal(false);
+                    setPasswordInput('');
+                    setAuthError('');
+                    showNotification('ปลดล็อกโหมดแก้ไขสำเร็จ');
+                    if (pendingAction === 'settings') { setShowSettingsModal(true); setPendingAction(null); }
+                } else {
+                    setAuthError('รหัสผ่านไม่ถูกต้อง');
+                }
+            };
+
+            const addListItem = () => {
+                if (!newListItem.trim()) return;
+                if (listManageType === 'senders') { if (!senders.includes(newListItem)) setSenders([...senders, newListItem]); } 
+                else { if (!receivers.includes(newListItem)) setReceivers([...receivers, newListItem]); }
+                setNewListItem('');
+            };
+
+            const removeListItem = (itemToRemove) => {
+                if (listManageType === 'senders') { setSenders(senders.filter(item => item !== itemToRemove)); } 
+                else { setReceivers(receivers.filter(item => item !== itemToRemove)); }
+            };
+
+            const exportToCSV = () => {
+                const headers = ['รหัสรายการ', 'สถานะ', 'ชื่อบริษัท/หน่วยงาน', 'เลขที่เอกสาร', 'วันที่เอกสาร', 'ยอดเงิน', 'ผู้ส่งมอบ', 'ผู้รับมอบ', 'วันเวลาที่รับมอบ'];
+                const csvData = records.map(rec => [
+                    rec.id,
+                    rec.receiverName ? 'รับแล้ว' : 'รอรับมอบ',
+                    `"${rec.companyName}"`,
+                    `"${rec.docNumber}"`,
+                    rec.docDate,
+                    rec.amount,
+                    `"${rec.senderName}"`,
+                    `"${rec.receiverName || ''}"`,
+                    rec.receiptDateTime ? rec.receiptDateTime.replace('T', ' ') : ''
+                ]);
+
+                const csvContent = [headers.join(','), ...csvData.map(row => row.join(','))].join('\n');
+                const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement("a");
+                const url = URL.createObjectURL(blob);
+                link.setAttribute("href", url);
+                link.setAttribute("download", `ประวัติรับส่งบิล_${new Date().toISOString().split('T')[0]}.csv`);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            };
+
+            // การแยกประเภทข้อมูล
+            const pendingRecords = records.filter(rec => !rec.receiverName); // รอรับ (ไม่มีชื่อผู้รับ)
+            
+            // กรองข้อมูลสำหรับแสดงในตารางปัจจุบัน (ค้นหาด้วย)
+            let displayRecords = activeTab === 'pending' ? pendingRecords : records;
+            displayRecords = displayRecords.filter(rec => 
+                (rec.companyName && rec.companyName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                (rec.docNumber && rec.docNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                (rec.senderName && rec.senderName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                (rec.receiverName && rec.receiverName.toLowerCase().includes(searchTerm.toLowerCase()))
+            );
+
+            return (
+                <div className="min-h-screen text-gray-800 font-sans p-4 md:p-8">
+                    <div className="max-w-6xl mx-auto space-y-6">
+                        
+                        {/* Header */}
+                        <div className="bg-white rounded-xl shadow-sm p-6 flex flex-col md:flex-row justify-between items-center border border-gray-100">
+                            <div className="flex items-center space-x-3 mb-4 md:mb-0">
+                                <div className="bg-blue-600 p-2 rounded-lg text-white">
+                                    <Icon name="FileText" size={28} />
+                                </div>
+                                <div>
+                                    <h1 className="text-2xl font-bold text-gray-800">ระบบรับ-ส่งบิล</h1>
+                                    <p className="text-sm text-gray-500">ห้องแล็บ - การเงิน/พัสดุ</p>
+                                </div>
+                            </div>
+                            
+                            <div className="flex flex-wrap gap-2 justify-end">
+                                <button onClick={exportToCSV} className="flex items-center px-4 py-2 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors border border-green-200">
+                                    <Icon name="Download" size={18} className="mr-2" />
+                                    Export CSV
+                                </button>
+                                <button onClick={handleSettingsClick} className="flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors border border-gray-200">
+                                    <Icon name="Settings" size={18} className="mr-2" />
+                                    ตั้งค่าชื่อพนักงาน
+                                </button>
+                                {isAdmin ? (
+                                    <button onClick={() => setIsAdmin(false)} className="flex items-center px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors border border-red-200">
+                                        <Icon name="Unlock" size={18} className="mr-2" /> ปิดโหมดลบข้อมูล
+                                    </button>
+                                ) : (
+                                    <button onClick={() => { setPendingAction(null); setShowAuthModal(true); }} className="flex items-center px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors border border-blue-200">
+                                        <Icon name="Lock" size={18} className="mr-2" /> ปลดล็อกแก้ไข
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Notification Toast */}
+                        {notification && (
+                            <div className={`fixed top-4 right-4 z-50 flex items-center p-4 rounded-lg shadow-lg ${notification.type === 'error' ? 'bg-red-100 text-red-800 border border-red-200' : 'bg-green-100 text-green-800 border border-green-200'}`}>
+                                {notification.type === 'error' ? <Icon name="AlertCircle" size={20} className="mr-2" /> : <Icon name="CheckCircle2" size={20} className="mr-2" />}
+                                {notification.message}
+                            </div>
+                        )}
+
+                        {/* แท็บเมนูหลัก */}
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                            <div className="flex border-b border-gray-200">
+                                <button 
+                                    onClick={() => setActiveTab('lab')}
+                                    className={`flex-1 py-4 px-4 text-sm font-medium flex items-center justify-center transition-colors ${activeTab === 'lab' ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50/50' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}
+                                >
+                                    <Icon name="Edit" size={18} className="mr-2" />
+                                    1. ห้องแล็บ (เตรียมส่งบิล)
+                                </button>
+                                <button 
+                                    onClick={() => setActiveTab('pending')}
+                                    className={`flex-1 py-4 px-4 text-sm font-medium flex items-center justify-center transition-colors ${activeTab === 'pending' ? 'text-orange-600 border-b-2 border-orange-600 bg-orange-50/50' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}
+                                >
+                                    <Icon name="Inbox" size={18} className="mr-2" />
+                                    2. จุดรับบิล (รอรับมอบ)
+                                    {pendingRecords.length > 0 && (
+                                        <span className="ml-2 bg-orange-500 text-white text-xs px-2 py-0.5 rounded-full">{pendingRecords.length}</span>
+                                    )}
+                                </button>
+                                <button 
+                                    onClick={() => setActiveTab('history')}
+                                    className={`flex-1 py-4 px-4 text-sm font-medium flex items-center justify-center transition-colors ${activeTab === 'history' ? 'text-green-600 border-b-2 border-green-600 bg-green-50/50' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}
+                                >
+                                    <Icon name="CheckSquare" size={18} className="mr-2" />
+                                    3. ประวัติทั้งหมด
+                                </button>
+                            </div>
+
+                            <div className="p-6">
+                                {/* ====== TAB 1: ห้องแล็บ ====== */}
+                                {activeTab === 'lab' && (
+                                    <div>
+                                        <h2 className="text-lg font-semibold mb-6 pb-2 border-b flex items-center text-blue-800">
+                                            <Icon name="Plus" size={20} className="mr-2"/> บันทึกข้อมูลบิลที่จะส่ง (สำหรับห้องแล็บ)
+                                        </h2>
+                                        <form onSubmit={handleLabSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
+                                            
+                                            <div className="space-y-1 md:col-span-2 lg:col-span-1">
+                                                <label className="text-sm font-medium text-gray-700">ชื่อบริษัท / หน่วยงาน <span className="text-red-500">*</span></label>
+                                                <input type="text" name="companyName" value={formData.companyName} onChange={handleLabInputChange} required className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" placeholder="ระบุชื่อบริษัท" />
+                                            </div>
+
+                                            <div className="space-y-1">
+                                                <label className="text-sm font-medium text-gray-700">เลขที่เอกสาร <span className="text-red-500">*</span></label>
+                                                <input type="text" name="docNumber" value={formData.docNumber} onChange={handleLabInputChange} required className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" placeholder="เช่น INV-001" />
+                                            </div>
+
+                                            <div className="space-y-1">
+                                                <label className="text-sm font-medium text-gray-700">วันที่บนเอกสาร</label>
+                                                <input type="date" name="docDate" value={formData.docDate} onChange={handleLabInputChange} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" />
+                                            </div>
+
+                                            <div className="space-y-1">
+                                                <label className="text-sm font-medium text-gray-700">ยอดเงิน (บาท) <span className="text-red-500">*</span></label>
+                                                <input type="number" name="amount" value={formData.amount} onChange={handleLabInputChange} required min="0" step="0.01" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" placeholder="0.00" />
+                                            </div>
+
+                                            <div className="space-y-1">
+                                                <label className="text-sm font-medium text-gray-700">ชื่อพนักงานผู้ส่ง (แล็บ) <span className="text-red-500">*</span></label>
+                                                <select name="senderName" value={formData.senderName} onChange={handleLabInputChange} required className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-white">
+                                                    <option value="">-- เลือกผู้ส่ง --</option>
+                                                    {senders.map((sender, idx) => (<option key={idx} value={sender}>{sender}</option>))}
+                                                </select>
+                                            </div>
+
+                                            <div className="md:col-span-2 lg:col-span-3 flex justify-end mt-4">
+                                                <button type="submit" disabled={isSubmitting} className="flex items-center px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-sm hover:shadow disabled:opacity-70 disabled:cursor-not-allowed">
+                                                    <Icon name="Save" size={18} className="mr-2" />
+                                                    {isSubmitting ? 'กำลังส่งข้อมูล...' : 'ส่งข้อมูลเตรียมรับมอบ'}
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                )}
+
+                                {/* ====== TAB 2 & 3: ตารางแสดงข้อมูล ====== */}
+                                {(activeTab === 'pending' || activeTab === 'history') && (
+                                    <div>
+                                        <div className="mb-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+                                            <h2 className={`text-lg font-semibold flex items-center ${activeTab === 'pending' ? 'text-orange-700' : 'text-green-700'}`}>
+                                                {activeTab === 'pending' ? 'บิลที่รอการรับมอบจากห้องแล็บ' : 'ประวัติการรับ-ส่งเอกสารทั้งหมด'}
+                                            </h2>
+                                            <div className="relative w-full sm:w-72">
+                                                <input type="text" placeholder="ค้นหา ชื่อ, เลขที่เอกสาร, ผู้ส่ง..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm" />
+                                                <Icon name="Search" size={18} className="absolute left-3 top-2.5 text-gray-400" />
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="overflow-x-auto rounded-lg border border-gray-200">
+                                            <table className="w-full text-left text-sm whitespace-nowrap">
+                                                <thead className="bg-gray-50 text-gray-600 border-b border-gray-200">
+                                                    <tr>
+                                                        <th className="px-6 py-3 font-medium">สถานะ</th>
+                                                        <th className="px-6 py-3 font-medium">บริษัท/หน่วยงาน</th>
+                                                        <th className="px-6 py-3 font-medium">เลขที่เอกสาร</th>
+                                                        <th className="px-6 py-3 font-medium text-right">ยอดเงิน</th>
+                                                        <th className="px-6 py-3 font-medium">ผู้ส่ง (แล็บ)</th>
+                                                        {activeTab === 'history' && <th className="px-6 py-3 font-medium">ผู้รับ (การเงิน/พัสดุ)</th>}
+                                                        <th className="px-6 py-3 font-medium text-center">จัดการ</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-gray-100">
+                                                    {isLoading ? (
+                                                        <tr>
+                                                            <td colSpan="7" className="px-6 py-8 text-center text-gray-500">
+                                                                <div className="flex justify-center items-center space-x-2">
+                                                                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                                                                    <span>กำลังดึงข้อมูลจาก Google Sheet...</span>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    ) : displayRecords.length === 0 ? (
+                                                        <tr>
+                                                            <td colSpan="7" className="px-6 py-8 text-center text-gray-500">ไม่พบข้อมูล</td>
+                                                        </tr>
+                                                    ) : (
+                                                        displayRecords.map((record) => (
+                                                            <tr key={record.id} className="hover:bg-gray-50 transition-colors">
+                                                                <td className="px-6 py-4">
+                                                                    {record.receiverName ? (
+                                                                        <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-medium flex items-center w-max">
+                                                                            <Icon name="CheckCircle2" size={14} className="mr-1" /> รับแล้ว
+                                                                        </span>
+                                                                    ) : (
+                                                                        <span className="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-xs font-medium flex items-center w-max">
+                                                                            <Icon name="Clock" size={14} className="mr-1" /> รอรับมอบ
+                                                                        </span>
+                                                                    )}
+                                                                </td>
+                                                                <td className="px-6 py-4">
+                                                                    <div className="font-medium text-gray-800">{record.companyName}</div>
+                                                                    <div className="text-xs text-gray-500">บันทึกเมื่อ: {new Date(record.timestamp).toLocaleDateString('th-TH')}</div>
+                                                                </td>
+                                                                <td className="px-6 py-4 text-blue-600 font-medium">{record.docNumber}</td>
+                                                                <td className="px-6 py-4 text-right font-medium text-gray-800">
+                                                                    {Number(record.amount).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                                                                </td>
+                                                                <td className="px-6 py-4 text-gray-700">{record.senderName}</td>
+                                                                
+                                                                {activeTab === 'history' && (
+                                                                    <td className="px-6 py-4">
+                                                                        {record.receiverName ? (
+                                                                            <div>
+                                                                                <div className="text-green-700 font-medium">{record.receiverName}</div>
+                                                                                <div className="text-xs text-gray-500">{new Date(record.receiptDateTime).toLocaleString('th-TH', {dateStyle:'short', timeStyle:'short'})} น.</div>
+                                                                            </div>
+                                                                        ) : (
+                                                                            <span className="text-gray-400 italic">-</span>
+                                                                        )}
+                                                                    </td>
+                                                                )}
+
+                                                                <td className="px-6 py-4 text-center">
+                                                                    {!record.receiverName && activeTab === 'pending' ? (
+                                                                        <button 
+                                                                            onClick={() => openReceiveModal(record.id)}
+                                                                            className="px-4 py-1.5 bg-orange-500 text-white text-sm font-medium rounded-lg hover:bg-orange-600 transition-colors shadow-sm"
+                                                                        >
+                                                                            กดรับเอกสาร
+                                                                        </button>
+                                                                    ) : (
+                                                                        <button 
+                                                                            onClick={() => handleDelete(record.id)}
+                                                                            disabled={!isAdmin}
+                                                                            className={`p-1.5 rounded-md transition-colors ${isAdmin ? 'text-red-600 hover:bg-red-100' : 'text-gray-300 cursor-not-allowed'}`}
+                                                                            title={isAdmin ? "ลบข้อมูล (ผู้ดูแลระบบ)" : "กรุณาปลดล็อกสิทธิ์เพื่อลบ"}
+                                                                        >
+                                                                            <Icon name="Trash2" size={18} />
+                                                                        </button>
+                                                                    )}
+                                                                </td>
+                                                            </tr>
+                                                        ))
+                                                    )}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* === Modal สำหรับกด "รับเอกสาร" === */}
+                    {receiveModal.show && (
+                        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                            <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden transform transition-all">
+                                <div className="bg-orange-500 p-4 flex justify-between items-center text-white">
+                                    <h3 className="font-semibold flex items-center"><Icon name="CheckSquare" size={18} className="mr-2"/> ยืนยันการรับเอกสาร</h3>
+                                    <button onClick={() => setReceiveModal({show:false, recordId:null})} className="text-orange-100 hover:text-white"><Icon name="X" size={20}/></button>
+                                </div>
+                                <div className="p-6">
+                                    <form onSubmit={handleReceiveSubmit} className="space-y-4">
+                                        <div className="space-y-1">
+                                            <label className="text-sm font-medium text-gray-700">ชื่อผู้รับมอบ (การเงิน/พัสดุ) <span className="text-red-500">*</span></label>
+                                            <select 
+                                                value={receiveData.receiverName} 
+                                                onChange={(e) => setReceiveData({...receiveData, receiverName: e.target.value})} 
+                                                required 
+                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all bg-white"
+                                            >
+                                                <option value="">-- เลือกชื่อของคุณ --</option>
+                                                {receivers.map((rec, idx) => (<option key={idx} value={rec}>{rec}</option>))}
+                                            </select>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-sm font-medium text-gray-700">วันและเวลาที่รับ <span className="text-red-500">*</span></label>
+                                            <input 
+                                                type="datetime-local" 
+                                                value={receiveData.receiptDateTime} 
+                                                onChange={(e) => setReceiveData({...receiveData, receiptDateTime: e.target.value})} 
+                                                required 
+                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none"
+                                            />
+                                        </div>
+                                        <div className="flex justify-end gap-2 mt-6">
+                                            <button type="button" onClick={() => setReceiveModal({show:false, recordId:null})} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">ยกเลิก</button>
+                                            <button type="submit" disabled={isSubmitting} className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:opacity-50">
+                                                {isSubmitting ? 'กำลังบันทึก...' : 'บันทึกการรับมอบ'}
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Auth Modal */}
+                    {showAuthModal && (
+                        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                            <div className="bg-white rounded-xl shadow-xl w-full max-w-sm overflow-hidden transform transition-all">
+                                <div className="bg-blue-600 p-4 flex justify-between items-center text-white">
+                                    <h3 className="font-semibold flex items-center"><Icon name="Lock" size={18} className="mr-2"/> ใส่รหัสผ่าน</h3>
+                                    <button onClick={() => setShowAuthModal(false)} className="text-blue-100 hover:text-white"><Icon name="X" size={20}/></button>
+                                </div>
+                                <div className="p-6">
+                                    <p className="text-sm text-gray-600 mb-4">กรุณาใส่รหัสผ่าน <br/> <span className="text-gray-400">(รหัสเริ่มต้น: admin)</span></p>
+                                    <form onSubmit={loginAdmin}>
+                                        <input type="password" value={passwordInput} onChange={(e) => setPasswordInput(e.target.value)} placeholder="รหัสผ่าน" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 mb-2 outline-none" autoFocus />
+                                        {authError && <p className="text-red-500 text-sm mb-4">{authError}</p>}
+                                        <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors mt-4">ยืนยัน</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Settings Modal */}
+                    {showSettingsModal && isAdmin && (
+                        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                            <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
+                                <div className="bg-gray-100 p-4 border-b border-gray-200 flex justify-between items-center">
+                                    <h3 className="font-semibold text-gray-800 flex items-center"><Icon name="Settings" size={18} className="mr-2"/> ตั้งค่าชื่อพนักงาน</h3>
+                                    <button onClick={() => setShowSettingsModal(false)} className="text-gray-500 hover:text-gray-800"><Icon name="X" size={20}/></button>
+                                </div>
+                                <div className="p-4 flex gap-2 border-b border-gray-100 bg-gray-50">
+                                    <button className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${listManageType === 'senders' ? 'bg-white shadow-sm text-blue-600 border border-gray-200' : 'text-gray-500 hover:bg-gray-200'}`} onClick={() => setListManageType('senders')}>แล็บ (ผู้ส่ง)</button>
+                                    <button className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${listManageType === 'receivers' ? 'bg-white shadow-sm text-blue-600 border border-gray-200' : 'text-gray-500 hover:bg-gray-200'}`} onClick={() => setListManageType('receivers')}>การเงิน/พัสดุ (ผู้รับ)</button>
+                                </div>
+                                <div className="p-4 overflow-y-auto flex-1">
+                                    <div className="flex gap-2 mb-4">
+                                        <input type="text" value={newListItem} onChange={(e) => setNewListItem(e.target.value)} placeholder={`เพิ่มชื่อพนักงานใหม่...`} className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" onKeyPress={(e) => e.key === 'Enter' && addListItem()} />
+                                        <button onClick={addListItem} className="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition-colors"><Icon name="Plus" size={18} /></button>
+                                    </div>
+                                    <ul className="space-y-2">
+                                        {(listManageType === 'senders' ? senders : receivers).map((item, idx) => (
+                                            <li key={idx} className="flex justify-between items-center p-3 bg-gray-50 border border-gray-100 rounded-lg">
+                                                <span className="text-sm font-medium text-gray-700">{item}</span>
+                                                <button onClick={() => removeListItem(item)} className="text-red-500 hover:bg-red-50 p-1.5 rounded-md transition-colors"><Icon name="Trash2" size={16} /></button>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
