@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบบันทึกกาฟรส่งบิล</title>
+    <title>ระบบบันทึกการส่งบิล</title>
     <!-- โหลด Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- โหลด React และ ReactDOM -->
@@ -48,7 +48,7 @@
         const ADMIN_PASSWORD = 'admin';
         
         // --- ⚠️ สำคัญ: ใส่ URL ใหม่ที่ได้จากการ Deploy ล่าสุดลงในช่องนี้ ---
-        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwdidFPwf80IJnMyFMaDmWnJvNch1sbqZ1FhsgXIbfaI9Q1v7OUMkj72jdI9BUc6_d3_Q/exec';
+        const GOOGLE_SCRIPT_URL = 'ใส่_URL_ของ_GOOGLE_APPS_SCRIPT_ตรงนี้';
 
         const App = () => {
             const [senders, setSenders] = useState(() => {
@@ -69,8 +69,8 @@
             // สถานะของหน้าเว็บ (แยก 3 แท็บ)
             const [activeTab, setActiveTab] = useState('lab'); // 'lab', 'pending', 'history'
 
-            // ข้อมูลสำหรับห้องแล็บ (ฝั่งผู้ส่ง)
-            const initialFormState = { id: null, companyName: '', docNumber: '', docDate: '', amount: '', senderName: '' };
+            // ข้อมูลสำหรับห้องแล็บ (ฝั่งผู้ส่ง) *มีช่อง remark แล้ว*
+            const initialFormState = { id: null, companyName: '', docNumber: '', docDate: '', amount: '', senderName: '', remark: '' };
             const [formData, setFormData] = useState(initialFormState);
             
             // ข้อมูลสำหรับการเงิน/พัสดุ (ฝั่งรับมอบ)
@@ -97,7 +97,7 @@
             // โหลดข้อมูลเริ่มต้น
             useEffect(() => {
                 const fetchRecords = async () => {
-                    if (GOOGLE_SCRIPT_URL && GOOGLE_SCRIPT_URL !== 'ใส่_URL_ที่ก๊อปปี้มา_ตรงนี้') {
+                    if (GOOGLE_SCRIPT_URL && GOOGLE_SCRIPT_URL !== 'https://script.google.com/macros/s/AKfycbwDXldcfPR-LrPV9XWgfiugMYf81RSqezrfku2hfP6JatJ5p_YhXCOnrna1idbcq83mrg/exec') {
                         try {
                             const response = await fetch(GOOGLE_SCRIPT_URL);
                             const text = await response.text();
@@ -106,6 +106,11 @@
                                 if (Array.isArray(data)) setRecords(data);
                             } catch (parseError) {
                                 console.error('ข้อมูลที่ได้รับไม่ใช่ JSON:', text);
+                                if (text.includes('🚀 ระบบเชื่อมต่อทำงานปกติ')) {
+                                    showNotification('⚠️ ตรวจพบ Apps Script เวอร์ชันเก่า! กรุณากลับไปที่ Apps Script กด Deploy > New deployment เพื่อรับ URL อันใหม่มาใส่ครับ', 'error');
+                                } else {
+                                    showNotification('⚠️ เกิดข้อผิดพลาดในการดึงข้อมูลจาก Sheet', 'error');
+                                }
                             }
                         } catch (error) {
                             console.error('Error fetching data:', error);
@@ -137,7 +142,7 @@
                 const newRecord = { ...formData, id: Date.now(), timestamp: new Date().toISOString() };
                 
                 try {
-                    if (GOOGLE_SCRIPT_URL && GOOGLE_SCRIPT_URL !== 'ใส่_URL_ที่ก๊อปปี้มา_ตรงนี้') {
+                    if (GOOGLE_SCRIPT_URL && GOOGLE_SCRIPT_URL !== 'ใส่_URL_ของ_GOOGLE_APPS_SCRIPT_ตรงนี้') {
                         await fetch(GOOGLE_SCRIPT_URL, {
                             method: 'POST',
                             mode: 'no-cors',
@@ -158,9 +163,8 @@
 
             // === ฝั่งการเงิน/พัสดุ: รับมอบบิล ===
             const openReceiveModal = (id) => {
-                // ตั้งค่าเวลาเริ่มต้นเป็นเวลาปัจจุบัน
                 const now = new Date();
-                const formattedNow = now.toISOString().slice(0, 16); // format: YYYY-MM-DDTHH:mm
+                const formattedNow = now.toISOString().slice(0, 16); 
                 setReceiveData({ receiverName: '', receiptDateTime: formattedNow });
                 setReceiveModal({ show: true, recordId: id });
             };
@@ -174,7 +178,7 @@
                 setIsSubmitting(true);
 
                 try {
-                    if (GOOGLE_SCRIPT_URL && GOOGLE_SCRIPT_URL !== 'ใส่_URL_ที่ก๊อปปี้มา_ตรงนี้') {
+                    if (GOOGLE_SCRIPT_URL && GOOGLE_SCRIPT_URL !== 'ใส่_URL_ของ_GOOGLE_APPS_SCRIPT_ตรงนี้') {
                         await fetch(GOOGLE_SCRIPT_URL, {
                             method: 'POST',
                             mode: 'no-cors',
@@ -186,7 +190,6 @@
                         });
                     }
                     
-                    // อัปเดตข้อมูลบนหน้าจอ
                     setRecords(records.map(rec => 
                         rec.id === receiveModal.recordId 
                         ? { ...rec, receiverName: receiveData.receiverName, receiptDateTime: receiveData.receiptDateTime } 
@@ -209,7 +212,7 @@
                     setRecords(records.filter(rec => rec.id !== id));
                     showNotification('ลบข้อมูลเรียบร้อย');
                     try {
-                        if (GOOGLE_SCRIPT_URL && GOOGLE_SCRIPT_URL !== 'ใส่_URL_ที่ก๊อปปี้มา_ตรงนี้') {
+                        if (GOOGLE_SCRIPT_URL && GOOGLE_SCRIPT_URL !== 'ใส่_URL_ของ_GOOGLE_APPS_SCRIPT_ตรงนี้') {
                             await fetch(GOOGLE_SCRIPT_URL, {
                                 method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                                 body: JSON.stringify({ action: 'deleteRow', data: { id: id } })
@@ -250,7 +253,7 @@
             };
 
             const exportToCSV = () => {
-                const headers = ['รหัสรายการ', 'สถานะ', 'ชื่อบริษัท/หน่วยงาน', 'เลขที่เอกสาร', 'วันที่เอกสาร', 'ยอดเงิน', 'ผู้ส่งมอบ', 'ผู้รับมอบ', 'วันเวลาที่รับมอบ'];
+                const headers = ['รหัสรายการ', 'สถานะ', 'ชื่อบริษัท/หน่วยงาน', 'เลขที่เอกสาร', 'วันที่เอกสาร', 'ยอดเงิน', 'หมายเหตุ', 'ผู้ส่งมอบ', 'ผู้รับมอบ', 'วันเวลาที่รับมอบ'];
                 const csvData = records.map(rec => [
                     rec.id,
                     rec.receiverName ? 'รับแล้ว' : 'รอรับมอบ',
@@ -258,6 +261,7 @@
                     `"${rec.docNumber}"`,
                     rec.docDate,
                     rec.amount,
+                    `"${rec.remark || ''}"`,
                     `"${rec.senderName}"`,
                     `"${rec.receiverName || ''}"`,
                     rec.receiptDateTime ? rec.receiptDateTime.replace('T', ' ') : ''
@@ -276,15 +280,15 @@
             };
 
             // การแยกประเภทข้อมูล
-            const pendingRecords = records.filter(rec => !rec.receiverName); // รอรับ (ไม่มีชื่อผู้รับ)
+            const pendingRecords = records.filter(rec => !rec.receiverName);
             
-            // กรองข้อมูลสำหรับแสดงในตารางปัจจุบัน (ค้นหาด้วย)
             let displayRecords = activeTab === 'pending' ? pendingRecords : records;
             displayRecords = displayRecords.filter(rec => 
                 (rec.companyName && rec.companyName.toLowerCase().includes(searchTerm.toLowerCase())) ||
                 (rec.docNumber && rec.docNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
                 (rec.senderName && rec.senderName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                (rec.receiverName && rec.receiverName.toLowerCase().includes(searchTerm.toLowerCase()))
+                (rec.receiverName && rec.receiverName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                (rec.remark && rec.remark.toLowerCase().includes(searchTerm.toLowerCase()))
             );
 
             return (
@@ -398,6 +402,11 @@
                                                 </select>
                                             </div>
 
+                                            <div className="space-y-1 md:col-span-2 lg:col-span-3">
+                                                <label className="text-sm font-medium text-gray-700">หมายเหตุ (เพิ่มเติม)</label>
+                                                <input type="text" name="remark" value={formData.remark} onChange={handleLabInputChange} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" placeholder="เช่น เป็นค่าเช่าเครื่องเดือนกุมภาพันธ์ 2569" />
+                                            </div>
+
                                             <div className="md:col-span-2 lg:col-span-3 flex justify-end mt-4">
                                                 <button type="submit" disabled={isSubmitting} className="flex items-center px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-sm hover:shadow disabled:opacity-70 disabled:cursor-not-allowed">
                                                     <Icon name="Save" size={18} className="mr-2" />
@@ -416,7 +425,7 @@
                                                 {activeTab === 'pending' ? 'บิลที่รอการรับมอบจากห้องแล็บ' : 'ประวัติการรับ-ส่งเอกสารทั้งหมด'}
                                             </h2>
                                             <div className="relative w-full sm:w-72">
-                                                <input type="text" placeholder="ค้นหา ชื่อ, เลขที่เอกสาร, ผู้ส่ง..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm" />
+                                                <input type="text" placeholder="ค้นหา ชื่อ, เลขที่, ผู้ส่ง, หมายเหตุ..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm" />
                                                 <Icon name="Search" size={18} className="absolute left-3 top-2.5 text-gray-400" />
                                             </div>
                                         </div>
@@ -465,6 +474,7 @@
                                                                 <td className="px-6 py-4">
                                                                     <div className="font-medium text-gray-800">{record.companyName}</div>
                                                                     <div className="text-xs text-gray-500">บันทึกเมื่อ: {new Date(record.timestamp).toLocaleDateString('th-TH')}</div>
+                                                                    {record.remark && <div className="text-xs text-indigo-600 mt-1 bg-indigo-50 inline-block px-2 py-0.5 rounded">หมายเหตุ: {record.remark}</div>}
                                                                 </td>
                                                                 <td className="px-6 py-4 text-blue-600 font-medium">{record.docNumber}</td>
                                                                 <td className="px-6 py-4 text-right font-medium text-gray-800">
