@@ -11,6 +11,41 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <!-- โหลด Babel สำหรับแปลง JSX ให้ทำงานบน Browser ได้ -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- สคริปต์ป้องกันการคลิกขวาและการกดปุ่มดู Source Code (F12, Ctrl+Shift+I, Ctrl+U) -->
+    <script>
+        // ป้องกันการคลิกขวา
+        document.addEventListener('contextmenu', event => event.preventDefault());
+        
+        // ป้องกันคีย์ลัดต่างๆ
+        document.addEventListener('keydown', function(e) {
+            // ป้องกัน F12
+            if (e.key === 'F12' || e.keyCode === 123) {
+                e.preventDefault();
+                return false;
+            }
+            // ป้องกัน Ctrl+Shift+I (เปิด DevTools)
+            if (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i')) {
+                e.preventDefault();
+                return false;
+            }
+            // ป้องกัน Ctrl+Shift+J (เปิด Console)
+            if (e.ctrlKey && e.shiftKey && (e.key === 'J' || e.key === 'j')) {
+                e.preventDefault();
+                return false;
+            }
+            // ป้องกัน Ctrl+Shift+C (เปิด Inspect Element)
+            if (e.ctrlKey && e.shiftKey && (e.key === 'C' || e.key === 'c')) {
+                e.preventDefault();
+                return false;
+            }
+            // ป้องกัน Ctrl+U (ดู View Source)
+            if (e.ctrlKey && (e.key === 'U' || e.key === 'u')) {
+                e.preventDefault();
+                return false;
+            }
+        });
+    </script>
 </head>
 <body class="bg-gray-50">
     <div id="root"></div>
@@ -47,7 +82,7 @@
             );
         };
 
-        const ADMIN_PASSWORD = 'admin';
+        const ADMIN_PASSWORD = '045489064';
         
         // --- ⚠️ สำคัญ: ใส่ URL ใหม่ที่ได้จากการ Deploy ล่าสุดลงในช่องนี้ ---
         const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwDXldcfPR-LrPV9XWgfiugMYf81RSqezrfku2hfP6JatJ5p_YhXCOnrna1idbcq83mrg/exec';
@@ -284,18 +319,24 @@
 
             const exportToCSV = () => {
                 const headers = ['รหัสรายการ', 'สถานะ', 'ชื่อบริษัท/หน่วยงาน', 'เลขที่เอกสาร', 'วันที่เอกสาร', 'ยอดเงิน', 'หมายเหตุ', 'ผู้ส่งมอบ', 'ผู้รับมอบ', 'วันเวลาที่รับมอบ'];
-                const csvData = records.map(rec => [
-                    rec.id,
-                    rec.receiverName ? 'รับแล้ว' : 'รอรับมอบ',
-                    `"${rec.companyName}"`,
-                    `"${rec.docNumber}"`,
-                    rec.docDate,
-                    rec.amount,
-                    `"${rec.remark || ''}"`,
-                    `"${rec.senderName}"`,
-                    `"${rec.receiverName || ''}"`,
-                    rec.receiptDateTime ? rec.receiptDateTime.replace('T', ' ') : ''
-                ]);
+                const csvData = records.map(rec => {
+                    // จัดรูปแบบวันที่ให้อ่านง่ายสำหรับ Excel
+                    const formattedDocDate = rec.docDate ? new Date(rec.docDate).toLocaleDateString('th-TH') : '';
+                    const formattedReceiptDate = rec.receiptDateTime ? new Date(rec.receiptDateTime).toLocaleString('th-TH') : '';
+                    
+                    return [
+                        rec.id,
+                        rec.receiverName ? 'รับแล้ว' : 'รอรับมอบ',
+                        `"${rec.companyName}"`,
+                        `"${rec.docNumber}"`,
+                        `"${formattedDocDate}"`,
+                        rec.amount,
+                        `"${rec.remark || ''}"`,
+                        `"${rec.senderName}"`,
+                        `"${rec.receiverName || ''}"`,
+                        `"${formattedReceiptDate}"`
+                    ];
+                });
 
                 const csvContent = [headers.join(','), ...csvData.map(row => row.join(','))].join('\n');
                 const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
