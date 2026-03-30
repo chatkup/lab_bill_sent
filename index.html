@@ -139,7 +139,10 @@
                 }
                 setIsSubmitting(true);
 
-                const newRecord = { ...formData, id: Date.now(), timestamp: new Date().toISOString() };
+                // ปรับให้บันทึกเวลาเป็นเวลาเครื่อง (Local Time / Zone BKK +7)
+                const now = new Date();
+                const localTimestamp = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 19);
+                const newRecord = { ...formData, id: Date.now(), timestamp: localTimestamp };
                 
                 try {
                     if (GOOGLE_SCRIPT_URL && GOOGLE_SCRIPT_URL !== 'ใส่_URL_ของ_GOOGLE_APPS_SCRIPT_ตรงนี้') {
@@ -164,7 +167,9 @@
             // === ฝั่งการเงิน/พัสดุ: รับมอบบิล ===
             const openReceiveModal = (id) => {
                 const now = new Date();
-                const formattedNow = now.toISOString().slice(0, 16); 
+                // ปรับเวลาเริ่มต้นให้เป็นเวลาเครื่อง (Local Time / Zone BKK +7)
+                const localNow = new Date(now.getTime() - (now.getTimezoneOffset() * 60000));
+                const formattedNow = localNow.toISOString().slice(0, 16); 
                 setReceiveData({ receiverName: '', receiptDateTime: formattedNow });
                 setReceiveModal({ show: true, recordId: id });
             };
@@ -272,7 +277,11 @@
                 const link = document.createElement("a");
                 const url = URL.createObjectURL(blob);
                 link.setAttribute("href", url);
-                link.setAttribute("download", `ประวัติรับส่งบิล_${new Date().toISOString().split('T')[0]}.csv`);
+                
+                // ปรับวันที่ของชื่อไฟล์ CSV ให้เป็นเวลา Local Time
+                const localDate = new Date(new Date().getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+                link.setAttribute("download", `ประวัติรับส่งบิล_${localDate}.csv`);
+                
                 link.style.visibility = 'hidden';
                 document.body.appendChild(link);
                 link.click();
