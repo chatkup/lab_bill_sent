@@ -139,10 +139,7 @@
                 }
                 setIsSubmitting(true);
 
-                // ปรับให้บันทึกเวลาเป็นเวลาเครื่อง (Local Time / Zone BKK +7)
-                const now = new Date();
-                const localTimestamp = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 19);
-                const newRecord = { ...formData, id: Date.now(), timestamp: localTimestamp };
+                const newRecord = { ...formData, id: Date.now(), timestamp: new Date().toISOString() };
                 
                 try {
                     if (GOOGLE_SCRIPT_URL && GOOGLE_SCRIPT_URL !== 'ใส่_URL_ของ_GOOGLE_APPS_SCRIPT_ตรงนี้') {
@@ -167,9 +164,7 @@
             // === ฝั่งการเงิน/พัสดุ: รับมอบบิล ===
             const openReceiveModal = (id) => {
                 const now = new Date();
-                // ปรับเวลาเริ่มต้นให้เป็นเวลาเครื่อง (Local Time / Zone BKK +7)
-                const localNow = new Date(now.getTime() - (now.getTimezoneOffset() * 60000));
-                const formattedNow = localNow.toISOString().slice(0, 16); 
+                const formattedNow = now.toISOString().slice(0, 16); 
                 setReceiveData({ receiverName: '', receiptDateTime: formattedNow });
                 setReceiveModal({ show: true, recordId: id });
             };
@@ -277,11 +272,7 @@
                 const link = document.createElement("a");
                 const url = URL.createObjectURL(blob);
                 link.setAttribute("href", url);
-                
-                // ปรับวันที่ของชื่อไฟล์ CSV ให้เป็นเวลา Local Time
-                const localDate = new Date(new Date().getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().split('T')[0];
-                link.setAttribute("download", `ประวัติรับส่งบิล_${localDate}.csv`);
-                
+                link.setAttribute("download", `ประวัติรับส่งบิล_${new Date().toISOString().split('T')[0]}.csv`);
                 link.style.visibility = 'hidden';
                 document.body.appendChild(link);
                 link.click();
@@ -291,13 +282,16 @@
             // การแยกประเภทข้อมูล
             const pendingRecords = records.filter(rec => !rec.receiverName);
             
+            // กรองข้อมูลสำหรับแสดงในตารางปัจจุบัน (ค้นหาด้วย) *แก้ไขให้รองรับข้อมูลที่เป็นตัวเลข*
             let displayRecords = activeTab === 'pending' ? pendingRecords : records;
+            const safeSearchTerm = searchTerm.toLowerCase();
+            
             displayRecords = displayRecords.filter(rec => 
-                (rec.companyName && rec.companyName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                (rec.docNumber && rec.docNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                (rec.senderName && rec.senderName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                (rec.receiverName && rec.receiverName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                (rec.remark && rec.remark.toLowerCase().includes(searchTerm.toLowerCase()))
+                (rec.companyName && String(rec.companyName).toLowerCase().includes(safeSearchTerm)) ||
+                (rec.docNumber && String(rec.docNumber).toLowerCase().includes(safeSearchTerm)) ||
+                (rec.senderName && String(rec.senderName).toLowerCase().includes(safeSearchTerm)) ||
+                (rec.receiverName && String(rec.receiverName).toLowerCase().includes(safeSearchTerm)) ||
+                (rec.remark && String(rec.remark).toLowerCase().includes(safeSearchTerm))
             );
 
             return (
