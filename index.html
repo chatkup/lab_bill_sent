@@ -48,7 +48,7 @@
         const ADMIN_PASSWORD = 'admin';
         
         // --- ⚠️ สำคัญ: ใส่ URL ใหม่ที่ได้จากการ Deploy ล่าสุดลงในช่องนี้ ---
-        const GOOGLE_SCRIPT_URL = 'ใส่_URL_ของ_GOOGLE_APPS_SCRIPT_ตรงนี้';
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwDXldcfPR-LrPV9XWgfiugMYf81RSqezrfku2hfP6JatJ5p_YhXCOnrna1idbcq83mrg/exec';
 
         const App = () => {
             const [senders, setSenders] = useState(() => {
@@ -97,7 +97,7 @@
             // โหลดข้อมูลเริ่มต้น
             useEffect(() => {
                 const fetchRecords = async () => {
-                    if (GOOGLE_SCRIPT_URL && GOOGLE_SCRIPT_URL !== 'https://script.google.com/macros/s/AKfycbwDXldcfPR-LrPV9XWgfiugMYf81RSqezrfku2hfP6JatJ5p_YhXCOnrna1idbcq83mrg/exec') {
+                    if (GOOGLE_SCRIPT_URL && GOOGLE_SCRIPT_URL !== 'ใส่_URL_ของ_GOOGLE_APPS_SCRIPT_ตรงนี้') {
                         try {
                             const response = await fetch(GOOGLE_SCRIPT_URL);
                             const text = await response.text();
