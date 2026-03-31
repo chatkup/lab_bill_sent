@@ -82,7 +82,7 @@
             );
         };
 
-        const ADMIN_PASSWORD = 'admin';
+        const ADMIN_PASSWORD = '045489064';
         
         // --- ⚠️ สำคัญ: ใส่ URL ใหม่ที่ได้จากการ Deploy ล่าสุดลงในช่องนี้ ---
         const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwSXNMjWIOEt_026InRvmOAoSCZFvzrV9uJmPfjYFtEgrmaaZeQjkU-qqRkpdD2BMjFxg/exec';
@@ -109,8 +109,12 @@
             const [searchTerm, setSearchTerm] = useState('');
             const [historyFilter, setHistoryFilter] = useState('all'); // ตัวกรองสถานะในแท็บ 3: 'all', 'pending', 'received'
             
-            // เดือนที่เลือกแสดงใน Dashboard (เริ่มต้นเป็นเดือนปัจจุบัน YYYY-MM)
-            const [dashboardMonth, setDashboardMonth] = useState(new Date().toISOString().slice(0, 7));
+            // เดือนที่เลือกแสดงใน Dashboard (ตั้งค่าเริ่มต้นเป็นเดือนปัจจุบันของเครื่อง - local time)
+            const [dashboardMonth, setDashboardMonth] = useState(() => {
+                const now = new Date();
+                const tzOffset = now.getTimezoneOffset() * 60000;
+                return new Date(now.getTime() - tzOffset).toISOString().slice(0, 7);
+            });
 
             const [isAdmin, setIsAdmin] = useState(false);
             const [showAuthModal, setShowAuthModal] = useState(false);
@@ -169,10 +173,14 @@
                 fetchRecords();
             }, []);
 
-            // === คำนวณข้อมูล Dashboard สรุปผลสำหรับเดือนที่เลือก ===
+            // === คำนวณข้อมูล Dashboard สรุปผลสำหรับเดือนที่เลือก (แปลงเป็น Local Time ก่อนเทียบ) ===
             const currentMonthRecords = records.filter(rec => {
                 if (!rec.timestamp) return false;
-                return rec.timestamp.startsWith(dashboardMonth);
+                const recDate = new Date(rec.timestamp);
+                if (isNaN(recDate.getTime())) return false; // กัน Error ถ้าวันที่พัง
+                const tzOffset = recDate.getTimezoneOffset() * 60000;
+                const localMonth = new Date(recDate.getTime() - tzOffset).toISOString().slice(0, 7);
+                return localMonth === dashboardMonth;
             });
 
             const dashboardStats = {
@@ -229,8 +237,10 @@
             // === ฝั่งการเงิน/พัสดุ: รับมอบบิล ===
             const openReceiveModal = (id) => {
                 const now = new Date();
-                const formattedNow = now.toISOString().slice(0, 16); 
-                setReceiveData({ receiverName: '', receiptDateTime: formattedNow });
+                const tzOffset = now.getTimezoneOffset() * 60000; 
+                // ดึงเวลา Local (BKK Time) แล้ว Slice เพื่อใช้กับ Input Type DateTime
+                const localISOTime = new Date(now.getTime() - tzOffset).toISOString().slice(0, 16); 
+                setReceiveData({ receiverName: '', receiptDateTime: localISOTime });
                 setReceiveModal({ show: true, recordId: id });
             };
 
@@ -375,7 +385,13 @@
                 const link = document.createElement("a");
                 const url = URL.createObjectURL(blob);
                 link.setAttribute("href", url);
-                link.setAttribute("download", `ประวัติรับส่งบิล_${new Date().toISOString().split('T')[0]}.csv`);
+                
+                // แก้ไขชื่อไฟล์ CSV ให้เป็นวันที่ Local Time
+                const exportDate = new Date();
+                const tzOffset = exportDate.getTimezoneOffset() * 60000;
+                const localExportDateStr = new Date(exportDate.getTime() - tzOffset).toISOString().split('T')[0];
+                link.setAttribute("download", `ประวัติรับส่งบิล_${localExportDateStr}.csv`);
+                
                 link.style.visibility = 'hidden';
                 document.body.appendChild(link);
                 link.click();
