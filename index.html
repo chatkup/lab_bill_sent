@@ -82,23 +82,15 @@
             );
         };
 
-        const ADMIN_PASSWORD = '045489064';
+        const ADMIN_PASSWORD = 'admin';
         
         // --- ⚠️ สำคัญ: ใส่ URL ใหม่ที่ได้จากการ Deploy ล่าสุดลงในช่องนี้ ---
-        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwDXldcfPR-LrPV9XWgfiugMYf81RSqezrfku2hfP6JatJ5p_YhXCOnrna1idbcq83mrg/exec';
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwSXNMjWIOEt_026InRvmOAoSCZFvzrV9uJmPfjYFtEgrmaaZeQjkU-qqRkpdD2BMjFxg/exec';
 
         const App = () => {
-            const [senders, setSenders] = useState(() => {
-                const savedSenders = localStorage.getItem('billTracker_senders');
-                return savedSenders ? JSON.parse(savedSenders) : ['สมชาย ใจดี', 'สมศรี รักงาน', 'ฝ่ายจัดซื้อ'];
-            });
-            const [receivers, setReceivers] = useState(() => {
-                const savedReceivers = localStorage.getItem('billTracker_receivers');
-                return savedReceivers ? JSON.parse(savedReceivers) : ['การเงิน 1', 'การเงิน 2', 'งานพัสดุกลาง'];
-            });
-            
-            useEffect(() => { localStorage.setItem('billTracker_senders', JSON.stringify(senders)); }, [senders]);
-            useEffect(() => { localStorage.setItem('billTracker_receivers', JSON.stringify(receivers)); }, [receivers]);
+            // ไม่ใช้ localStorage แล้ว จะรอรับข้อมูลจาก Google Sheet แทน
+            const [senders, setSenders] = useState([]);
+            const [receivers, setReceivers] = useState([]);
 
             const [records, setRecords] = useState([]);
             const [isLoading, setIsLoading] = useState(true);
@@ -136,7 +128,7 @@
                 setTimeout(() => setNotification(null), 5000);
             };
 
-            // โหลดข้อมูลเริ่มต้น
+            // โหลดข้อมูลเริ่มต้น (บิล และ รายชื่อ) จาก Cloud
             useEffect(() => {
                 const fetchRecords = async () => {
                     if (GOOGLE_SCRIPT_URL && GOOGLE_SCRIPT_URL !== 'ใส่_URL_ของ_GOOGLE_APPS_SCRIPT_ตรงนี้') {
@@ -145,7 +137,17 @@
                             const text = await response.text();
                             try {
                                 const data = JSON.parse(text);
-                                if (Array.isArray(data)) setRecords(data);
+                                
+                                // ตรวจสอบว่าได้รับข้อมูลแบบใหม่ที่แบ่ง records และ settings หรือไม่
+                                if (data && data.records && data.settings) {
+                                    setRecords(data.records);
+                                    setSenders(data.settings.senders || []);
+                                    setReceivers(data.settings.receivers || []);
+                                } else if (Array.isArray(data)) {
+                                    // รองรับกรณีฉุกเฉิน หากยังเป็นโครงสร้างแบบเก่า
+                                    setRecords(data);
+                                }
+
                             } catch (parseError) {
                                 console.error('ข้อมูลที่ได้รับไม่ใช่ JSON:', text);
                                 if (text.includes('🚀 ระบบเชื่อมต่อทำงานปกติ')) {
@@ -156,7 +158,7 @@
                             }
                         } catch (error) {
                             console.error('Error fetching data:', error);
-                            showNotification('⚠️ เกิดข้อผิดพลาดในการเชื่อมต่อ', 'error');
+                            showNotification('⚠️ เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์', 'error');
                         } finally {
                             setIsLoading(false);
                         }
@@ -168,7 +170,6 @@
             }, []);
 
             // === คำนวณข้อมูล Dashboard สรุปผลสำหรับเดือนที่เลือก ===
-            // ใช้ timestamp (วันที่เตรียมส่งบิล) เป็นเกณฑ์กรองเดือน
             const currentMonthRecords = records.filter(rec => {
                 if (!rec.timestamp) return false;
                 return rec.timestamp.startsWith(dashboardMonth);
@@ -186,7 +187,6 @@
                 dashboardStats.bySender[sender] = (dashboardStats.bySender[sender] || 0) + 1;
             });
             
-            // เรียงลำดับผู้ส่งที่มีคนส่งเยอะสุดขึ้นก่อน
             const sortedSenders = Object.entries(dashboardStats.bySender).sort((a, b) => b[1] - a[1]);
             const maxSenderCount = sortedSenders.length > 0 ? sortedSenders[0][1] : 1;
 
@@ -305,22 +305,54 @@
                 }
             };
 
-            const addListItem = () => {
+            // --- ฟังก์ชันเพิ่มชื่อลง Sheet ---
+            const addListItem = async () => {
                 if (!newListItem.trim()) return;
-                if (listManageType === 'senders') { if (!senders.includes(newListItem)) setSenders([...senders, newListItem]); } 
-                else { if (!receivers.includes(newListItem)) setReceivers([...receivers, newListItem]); }
+                const itemToAdd = newListItem.trim();
+                const type = listManageType;
+                
+                // อัปเดตหน้าจอทันทีเพื่อให้รู้สึกเร็ว
+                if (type === 'senders') { if (!senders.includes(itemToAdd)) setSenders([...senders, itemToAdd]); } 
+                else { if (!receivers.includes(itemToAdd)) setReceivers([...receivers, itemToAdd]); }
                 setNewListItem('');
+
+                try {
+                    if (GOOGLE_SCRIPT_URL && GOOGLE_SCRIPT_URL !== 'ใส่_URL_ของ_GOOGLE_APPS_SCRIPT_ตรงนี้') {
+                        await fetch(GOOGLE_SCRIPT_URL, {
+                            method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                            body: JSON.stringify({ action: 'addSetting', data: { type: type, value: itemToAdd } })
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error adding setting:', error);
+                    showNotification('เกิดข้อผิดพลาดในการบันทึกรายชื่อลงเซิร์ฟเวอร์', 'error');
+                }
             };
 
-            const removeListItem = (itemToRemove) => {
-                if (listManageType === 'senders') { setSenders(senders.filter(item => item !== itemToRemove)); } 
+            // --- ฟังก์ชันลบชื่อออกจาก Sheet ---
+            const removeListItem = async (itemToRemove) => {
+                const type = listManageType;
+
+                // อัปเดตหน้าจอทันที
+                if (type === 'senders') { setSenders(senders.filter(item => item !== itemToRemove)); } 
                 else { setReceivers(receivers.filter(item => item !== itemToRemove)); }
+
+                try {
+                    if (GOOGLE_SCRIPT_URL && GOOGLE_SCRIPT_URL !== 'ใส่_URL_ของ_GOOGLE_APPS_SCRIPT_ตรงนี้') {
+                        await fetch(GOOGLE_SCRIPT_URL, {
+                            method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                            body: JSON.stringify({ action: 'removeSetting', data: { type: type, value: itemToRemove } })
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error removing setting:', error);
+                    showNotification('เกิดข้อผิดพลาดในการลบรายชื่อบนเซิร์ฟเวอร์', 'error');
+                }
             };
 
             const exportToCSV = () => {
                 const headers = ['รหัสรายการ', 'สถานะ', 'ชื่อบริษัท/หน่วยงาน', 'เลขที่เอกสาร', 'วันที่เอกสาร', 'ยอดเงิน', 'หมายเหตุ', 'ผู้ส่งมอบ', 'ผู้รับมอบ', 'วันเวลาที่รับมอบ'];
                 const csvData = records.map(rec => {
-                    // จัดรูปแบบวันที่ให้อ่านง่ายสำหรับ Excel
                     const formattedDocDate = rec.docDate ? new Date(rec.docDate).toLocaleDateString('th-TH') : '';
                     const formattedReceiptDate = rec.receiptDateTime ? new Date(rec.receiptDateTime).toLocaleString('th-TH') : '';
                     
