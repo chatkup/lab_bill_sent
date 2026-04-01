@@ -82,7 +82,7 @@
             );
         };
 
-        const ADMIN_PASSWORD = '045489064';
+        const ADMIN_PASSWORD = 'admin';
         
         // --- ⚠️ สำคัญ: ใส่ URL ใหม่ที่ได้จากการ Deploy ล่าสุดลงในช่องนี้ ---
         const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwSXNMjWIOEt_026InRvmOAoSCZFvzrV9uJmPfjYFtEgrmaaZeQjkU-qqRkpdD2BMjFxg/exec';
@@ -108,6 +108,7 @@
             
             const [searchTerm, setSearchTerm] = useState('');
             const [historyFilter, setHistoryFilter] = useState('all'); // ตัวกรองสถานะในแท็บ 3: 'all', 'pending', 'received'
+            const [historyMonthFilter, setHistoryMonthFilter] = useState(''); // ตัวกรองเดือนในแท็บ 3: ว่างคือแสดงทั้งหมด
             
             // เดือนที่เลือกแสดงใน Dashboard (ตั้งค่าเริ่มต้นเป็นเดือนปัจจุบันของเครื่อง - local time)
             const [dashboardMonth, setDashboardMonth] = useState(() => {
@@ -408,6 +409,18 @@
             if (activeTab === 'history') {
                 if (historyFilter === 'pending') displayRecords = displayRecords.filter(rec => !rec.receiverName);
                 if (historyFilter === 'received') displayRecords = displayRecords.filter(rec => rec.receiverName);
+                
+                // เพิ่มการกรองตามเดือน/ปี ในแท็บ 3
+                if (historyMonthFilter) {
+                    displayRecords = displayRecords.filter(rec => {
+                        if (!rec.timestamp) return false;
+                        const recDate = new Date(rec.timestamp);
+                        if (isNaN(recDate.getTime())) return false; 
+                        const tzOffset = recDate.getTimezoneOffset() * 60000;
+                        const localMonth = new Date(recDate.getTime() - tzOffset).toISOString().slice(0, 7);
+                        return localMonth === historyMonthFilter;
+                    });
+                }
             }
 
             const safeSearchTerm = searchTerm.toLowerCase();
@@ -613,18 +626,39 @@
                                             <div className="flex flex-col sm:flex-row w-full md:w-auto gap-2">
                                                 {/* ตัวกรองสำหรับแท็บประวัติ */}
                                                 {activeTab === 'history' && (
-                                                    <div className="relative">
-                                                        <select 
-                                                            value={historyFilter}
-                                                            onChange={(e) => setHistoryFilter(e.target.value)}
-                                                            className="w-full sm:w-auto pl-8 pr-8 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm bg-white text-gray-700 appearance-none"
-                                                        >
-                                                            <option value="all">สถานะทั้งหมด</option>
-                                                            <option value="pending">รอรับมอบ</option>
-                                                            <option value="received">รับแล้ว</option>
-                                                        </select>
-                                                        <Icon name="Filter" size={14} className="absolute left-3 top-3 text-gray-500 pointer-events-none" />
-                                                    </div>
+                                                    <>
+                                                        <div className="relative flex items-center w-full sm:w-auto">
+                                                            <input 
+                                                                type="month" 
+                                                                value={historyMonthFilter}
+                                                                onChange={(e) => setHistoryMonthFilter(e.target.value)}
+                                                                className="w-full sm:w-auto pl-3 pr-8 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm bg-white text-gray-700"
+                                                                title="เลือกเดือนที่ต้องการแสดง"
+                                                            />
+                                                            {historyMonthFilter && (
+                                                                <button 
+                                                                    onClick={() => setHistoryMonthFilter('')}
+                                                                    className="absolute right-2 text-gray-400 hover:text-red-500 bg-white"
+                                                                    title="ล้างการค้นหาเดือน (แสดงทุกเดือน)"
+                                                                    type="button"
+                                                                >
+                                                                    <Icon name="X" size={16} />
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                        <div className="relative">
+                                                            <select 
+                                                                value={historyFilter}
+                                                                onChange={(e) => setHistoryFilter(e.target.value)}
+                                                                className="w-full sm:w-auto pl-8 pr-8 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm bg-white text-gray-700 appearance-none"
+                                                            >
+                                                                <option value="all">สถานะทั้งหมด</option>
+                                                                <option value="pending">รอรับมอบ</option>
+                                                                <option value="received">รับแล้ว</option>
+                                                            </select>
+                                                            <Icon name="Filter" size={14} className="absolute left-3 top-3 text-gray-500 pointer-events-none" />
+                                                        </div>
+                                                    </>
                                                 )}
                                                 
                                                 <div className="relative w-full sm:w-64">
